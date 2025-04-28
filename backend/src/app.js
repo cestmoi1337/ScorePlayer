@@ -49,6 +49,37 @@ app.post('/signup', async (req, res) => {
 
 });
 
+// Login Route
+app.post('/login', (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password required.' });
+    }
+
+    const query = `SELECT * FROM users WHERE email = ?`;
+    db.get(query, [email], async (err, row) => {
+        if (err) {
+            console.error('Database error during login:', err);
+            return res.status(500).json({ message: 'Database error.' });
+        }
+
+        if (!row) {
+            return res.status(401).json({ message: 'Invalid email or password.' });
+        }
+
+        // Compare passwords
+        const match = await bcrypt.compare(password, row.password_hash);
+
+        if (match) {
+            res.status(200).json({ message: 'Login successful!', userId: row.id });
+        } else {
+            res.status(401).json({ message: 'Invalid email or password.' });
+        }
+    });
+});
+
+
 // Start Server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}`);
