@@ -15,6 +15,10 @@ const path = require('path');
 app.use(cors()); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // Parse incoming JSON requests
 
+// Serve uploaded files statically
+app.use('/uploads', express.static('src/uploads'));
+
+
 // ==============================
 // Test Route
 // ==============================
