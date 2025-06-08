@@ -10,14 +10,14 @@ const PORT = process.env.PORT || 3000;
 
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 // Middleware setup
-app.use(cors()); // Enable Cross-Origin Resource Sharing
-app.use(express.json()); // Parse incoming JSON requests
+app.use(cors());
+app.use(express.json());
 
 // Serve uploaded files statically
 app.use('/uploads', express.static('src/uploads'));
-
 
 // ==============================
 // Test Route
@@ -92,11 +92,9 @@ app.post('/login', (req, res) => {
 // ==============================
 // Multer Setup for File Upload
 // ==============================
-
-// Configure Multer storage settings
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'src/uploads/'); // Save files into backend/src/uploads/
+        cb(null, 'src/uploads/');
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -104,11 +102,10 @@ const storage = multer.diskStorage({
     }
 });
 
-// Initialize Multer
 const upload = multer({ storage: storage });
 
 // ==============================
-// Upload Route
+// Upload Route with OMR
 // ==============================
 app.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) {
@@ -116,6 +113,20 @@ app.post('/upload', upload.single('file'), (req, res) => {
     }
 
     console.log('File uploaded:', req.file);
+
+    // If it's a PDF, run Audiveris to extract MusicXML
+    if (req.file.mimetype === 'application/pdf') {
+        const pdfPath = path.resolve(__dirname, 'uploads', req.file.filename);
+        const outputDir = path.resolve(__dirname, 'uploads');
+
+        exec(`audiveris -batch -export -output "${outputDir}" "${pdfPath}"`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Audiveris error: ${error.message}`);
+            } else {
+                console.log(`✅ Audiveris finished processing ${req.file.filename}`);
+            }
+        });
+    }
 
     res.status(200).json({
         message: 'File uploaded successfully!',
@@ -138,7 +149,6 @@ app.get('/files', (req, res) => {
         res.status(200).json({ files: files });
     });
 });
-
 
 // ==============================
 // Start Server
